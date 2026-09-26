@@ -100,13 +100,24 @@ function saveUniqueLeads(newLeads) {
 async function qualifyLeadsWithGemini(rawSnippets) {
     if (!apiKey) return [];
 
-    const prompt = `You are a strict lead extraction agent for an overseas immigration and visa consultancy. 
+    const prompt = `You are an expert lead extraction and profiling agent for an overseas immigration and visa consultancy. 
     Target Markets: Nepal (Priority 1) and India (Priority 2).
     CRITICAL EXCLUSION: Do not include Gulf countries. Only Western destinations (Canada, Australia, UK, Europe, etc.).
+    
+    Analyze these raw web snippets thoroughly and extract as much maximum detail as possible for each client:
+    - fullName (or username / handle if name is not explicitly mentioned)
+    - location (city/country of the client)
+    - desiredDestination (Canada, Australia, UK, Europe, etc.)
+    - visaType (Study Visa, Work Permit, PR, Tourist, etc.)
+    - contactDetails (Extract phone numbers, email addresses, Instagram handles, Facebook profiles, or WhatsApp links found in the text. Be extremely thorough in catching contact info).
+    - conversionScore (0 to 100 based on intent)
+    - sourceLink, sourcePlatform, publishedTime
+    - aiReasoning (Summary of their specific query/problem)
+
     Analyze these raw snippets:
     ${JSON.stringify(rawSnippets, null, 2)}
-    Return strictly as a JSON array of objects with keys: 
-    fullName, location, desiredDestination, visaType, contactDetails, conversionScore, sourceLink, sourcePlatform, publishedTime, aiReasoning. If none, return [].`;
+    
+    Return strictly as a JSON array of objects with these exact keys. If a field is missing, put "Not provided". If no valid leads, return [].`;
 
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
