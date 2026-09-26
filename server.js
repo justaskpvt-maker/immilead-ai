@@ -24,6 +24,9 @@ if (!fs.existsSync(ARCHIVE_DIR)) {
 
 const apiKey = process.env.GEMINI_API_KEY;
 
+// 5 Minutes (300000 ms) delay to save Serper & Gemini API limits and prevent quota exhaustion
+const POLL_INTERVAL = 300000; 
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function fetchLiveLeadsFromWeb() {
@@ -122,7 +125,8 @@ async function qualifyLeadsWithGemini(rawSnippets) {
     Return strictly as a JSON array of objects with these exact keys. If a field is missing, put "Not provided". If no valid leads matching Nepal/India originating and non-Gulf destination, return [].`;
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        const response = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const res = await fetch(response, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -131,7 +135,7 @@ async function qualifyLeadsWithGemini(rawSnippets) {
             })
         });
 
-        const data = await response.json();
+        const data = await res.json();
         if (data.candidates && data.candidates[0].content.parts[0].text) {
             let rawText = data.candidates[0].content.parts[0].text.trim();
             const leads = JSON.parse(rawText);
@@ -144,7 +148,7 @@ async function qualifyLeadsWithGemini(rawSnippets) {
 }
 
 async function startAutonomousPipeline() {
-    console.log("🚀 ImmiLeadAI Autonomous Background Pipeline Active...");
+    console.log("🚀 ImmiLeadAI Rate-Optimized Background Pipeline Active (5-min interval)...");
     while (true) {
         try {
             const rawSnippets = await fetchLiveLeadsFromWeb();
@@ -157,7 +161,8 @@ async function startAutonomousPipeline() {
         } catch (err) {
             console.error("[ERROR] Pipeline loop error:", err.message);
         }
-        await sleep(120000);
+        // Wait 5 minutes before next run to fully protect API quotas
+        await sleep(POLL_INTERVAL);
     }
 }
 
@@ -177,7 +182,7 @@ app.get("/", (req, res) => {
                 service: "ImmiLeadAI Autonomous Agent", 
                 count: 0, 
                 leads: [], 
-                message: "Initializing first live batch, please refresh in a minute..." 
+                message: "Initializing first live batch, please refresh in a few minutes..." 
             });
         }
     } catch (err) {
