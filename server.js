@@ -179,7 +179,6 @@ app.post("/api/run-scanner", async (req, res) => {
     }
 });
 
-// Explicitly bind to '0.0.0.0' for Render
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ ImmiLeadAI Server running on port ${PORT}`);
     startAutonomousPipeline();
