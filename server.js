@@ -3,7 +3,6 @@ import cors from "cors";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
-import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
@@ -24,7 +23,6 @@ if (!fs.existsSync(ARCHIVE_DIR)) {
 }
 
 const apiKey = process.env.GEMINI_API_KEY;
-const ai = new GoogleGenAI({ apiKey: apiKey });
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -78,7 +76,6 @@ function saveUniqueLeads(newLeads) {
     }
 
     const existingContacts = new Set(existingLeads.map(l => l.contactDetails));
-    let addedCount = 0;
 
     newLeads.forEach(lead => {
         if (lead.contactDetails && !existingContacts.has(lead.contactDetails)) {
@@ -88,7 +85,6 @@ function saveUniqueLeads(newLeads) {
                 status: "Qualified (New)"
             });
             existingContacts.add(lead.contactDetails);
-            addedCount++;
         }
     });
 
@@ -102,6 +98,8 @@ function saveUniqueLeads(newLeads) {
 }
 
 async function qualifyLeadsWithGemini(rawSnippets) {
+    if (!apiKey) return [];
+
     const prompt = `You are a strict lead extraction agent for an overseas immigration and visa consultancy. 
     Target Markets: Nepal (Priority 1) and India (Priority 2).
     CRITICAL EXCLUSION: Do not include Gulf countries. Only Western destinations (Canada, Australia, UK, Europe, etc.).
@@ -110,24 +108,24 @@ async function qualifyLeadsWithGemini(rawSnippets) {
     Return strictly as a JSON array of objects with keys: 
     fullName, location, desiredDestination, visaType, contactDetails, conversionScore, sourceLink, sourcePlatform, publishedTime, aiReasoning. If none, return [].`;
 
-    const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            })
+        });
 
-    for (const model of modelsToTry) {
-        try {
-            const response = await ai.models.generateContent({
-                model: model,
-                contents: prompt,
-                config: { responseMimeType: "application/json" },
-            });
-
-            if (response && response.text) {
-                let rawText = response.text.trim().replace(/```json/g, "").replace(/```/g, "").trim();
-                const leads = JSON.parse(rawText);
-                if (Array.isArray(leads)) return leads;
-            }
-        } catch (err) {
-            await sleep(2000);
+        const data = await response.json();
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+            let rawText = data.candidates[0].content.parts[0].text.trim();
+            const leads = JSON.parse(rawText);
+            if (Array.isArray(leads)) return leads;
         }
+    } catch (err) {
+        console.error("[ERROR] Gemini fetch failed:", err.message);
     }
     return [];
 }
@@ -150,7 +148,6 @@ async function startAutonomousPipeline() {
     }
 }
 
-// Root route now displays the full leads database directly!
 app.get("/", (req, res) => {
     try {
         if (fs.existsSync(MASTER_DB_PATH)) {
