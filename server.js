@@ -150,6 +150,18 @@ async function startAutonomousPipeline() {
     }
 }
 
+// Root home route so base URL never gives "Cannot GET"
+app.get("/", (req, res) => {
+    res.json({ 
+        status: "Online", 
+        service: "ImmiLeadAI Autonomous Agent", 
+        endpoints: {
+            viewLeads: "/api/leads",
+            triggerScanner: "POST /api/run-scanner"
+        } 
+    });
+});
+
 app.get("/api/leads", (req, res) => {
     try {
         if (fs.existsSync(MASTER_DB_PATH)) {
@@ -182,4 +194,4 @@ app.post("/api/run-scanner", async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ ImmiLeadAI Server running on port ${PORT}`);
     startAutonomousPipeline();
-});  
+});
