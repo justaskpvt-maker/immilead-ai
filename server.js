@@ -30,11 +30,12 @@ async function fetchLiveLeadsFromWeb() {
     const serperKey = process.env.SERPER_API_KEY;
     if (!serperKey) return [];
 
+    // Broad queries capturing Nepal/India clients wanting ANY non-Gulf country and ANY visa type
     const platformQueries = [
-        "site:facebook.com \"want to go to\" OR \"visa for\" (Nepal OR India) (Canada OR UK OR Europe OR Australia OR Germany OR New Zealand)",
-        "site:instagram.com \"#canadavisa\" OR \"#ukvisa\" OR \"#europeimmigration\" (Nepal OR India)",
-        "site:linkedin.com \"visa sponsorship\" OR \"work permit\" (Nepal OR India) (Europe OR Canada OR UK OR Germany)",
-        "site:quora.com OR site:reddit.com \"moving from Nepal to\" OR \"moving from India to\" (Canada OR Europe OR UK OR Australia)"
+        "site:facebook.com OR site:instagram.com \"visa for\" (Nepal OR India) -(Dubai OR UAE OR Saudi OR Qatar OR Muscat OR Kuwait)",
+        "site:linkedin.com OR site:quora.com \"want to move to\" OR \"work permit\" OR \"study visa\" (Nepal OR India) -(Dubai OR UAE OR Saudi)",
+        "site:reddit.com \"immigration process from\" (Nepal OR India) -(Dubai OR UAE)",
+        "site:facebook.com \"consultant\" OR \"agent\" \"visa\" (Nepal OR India) (Europe OR UK OR Canada OR Australia OR Germany OR New Zealand OR USA)"
     ];
 
     const randomQuery = platformQueries[Math.floor(Math.random() * platformQueries.length)];
@@ -100,17 +101,17 @@ function saveUniqueLeads(newLeads) {
 async function qualifyLeadsWithGemini(rawSnippets) {
     if (!apiKey) return [];
 
-    const prompt = `You are an expert lead qualification agent for an overseas visa and immigration consultancy.
-    STRICT RULE 1 - CLIENT ORIGIN (Location): The client/inquirer MUST be from Nepal (Priority 1) or India (Priority 2). Reject anyone from other countries.
-    STRICT RULE 2 - DESIRED DESTINATION EXCLUSION: Strictly REJECT and IGNORE any leads whose desired destination is in the Gulf (Dubai, UAE, Saudi Arabia, Qatar, Oman, Kuwait, Bahrain, Middle East).
-    STRICT RULE 3 - ACCEPTED DESTINATIONS: The client can want to go to ANY other global country (Canada, Australia, UK, USA, entire Europe, Germany, France, New Zealand, etc.) for ANY visa type (Study, Work Permit, PR, Tourist, etc.).
+    const prompt = `You are an expert lead qualification agent for a global overseas visa and immigration consultancy.
+    STRICT RULE 1 - CLIENT ORIGIN: The person inquiring/client MUST be from Nepal (Priority 1) or India (Priority 2). Reject anyone originating from other countries.
+    STRICT RULE 2 - EXCLUDE GULF: Strictly REJECT and IGNORE any leads where the desired destination is in the Gulf or Middle East (Dubai, UAE, Saudi Arabia, Qatar, Oman, Kuwait, Bahrain, Sharjah, Abu Dhabi).
+    STRICT RULE 3 - ACCEPTED DESTINATIONS & VISAS: The client can want to go to ANY other country in the world (Europe, Germany, France, Italy, UK, Canada, Australia, New Zealand, USA, Japan, etc.) for ANY visa type (Study Visa, Work Permit, PR, Tourist, Business, Dependent, Job Seeker, etc.).
     
     Analyze these raw web snippets thoroughly and extract maximum client details:
     - fullName (or username / handle)
     - location (Must be verified as Nepal or India)
-    - desiredDestination (Any non-Gulf country like Canada, UK, Europe, Australia, etc.)
-    - visaType (Study Visa, Work Permit, PR, Tourist, etc.)
-    - contactDetails (Phone, email, social profile link)
+    - desiredDestination (Any valid non-Gulf country globally)
+    - visaType (Any visa category mentioned)
+    - contactDetails (Phone, email, social handle, WhatsApp)
     - conversionScore (0 to 100)
     - sourceLink, sourcePlatform, publishedTime
     - aiReasoning (Summary of their query)
