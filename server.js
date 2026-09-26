@@ -150,7 +150,6 @@ async function startAutonomousPipeline() {
     }
 }
 
-// Root home route so base URL never gives "Cannot GET"
 app.get("/", (req, res) => {
     res.json({ 
         status: "Online", 
