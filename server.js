@@ -150,41 +150,26 @@ async function startAutonomousPipeline() {
     }
 }
 
+// Root route now displays the full leads database directly!
 app.get("/", (req, res) => {
-    res.json({ 
-        status: "Online", 
-        service: "ImmiLeadAI Autonomous Agent", 
-        endpoints: {
-            viewLeads: "/api/leads",
-            triggerScanner: "POST /api/run-scanner"
-        } 
-    });
-});
-
-app.get("/api/leads", (req, res) => {
     try {
         if (fs.existsSync(MASTER_DB_PATH)) {
             const leads = JSON.parse(fs.readFileSync(MASTER_DB_PATH, "utf8"));
-            return res.json({ success: true, count: leads.length, leads });
+            return res.json({ 
+                success: true, 
+                service: "ImmiLeadAI Autonomous Agent", 
+                count: leads.length, 
+                leads 
+            });
         } else {
-            return res.json({ success: true, count: 0, leads: [], message: "Initializing first live batch..." });
+            return res.json({ 
+                success: true, 
+                service: "ImmiLeadAI Autonomous Agent", 
+                count: 0, 
+                leads: [], 
+                message: "Initializing first live batch, please refresh in a minute..." 
+            });
         }
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.post("/api/run-scanner", async (req, res) => {
-    try {
-        const rawSnippets = await fetchLiveLeadsFromWeb();
-        const qualifiedLeads = await qualifyLeadsWithGemini(rawSnippets);
-        let updatedList = [];
-        if (qualifiedLeads.length > 0) {
-            updatedList = saveUniqueLeads(qualifiedLeads);
-        } else if (fs.existsSync(MASTER_DB_PATH)) {
-            updatedList = JSON.parse(fs.readFileSync(MASTER_DB_PATH, "utf8"));
-        }
-        res.json({ success: true, count: updatedList.length, leads: updatedList });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
